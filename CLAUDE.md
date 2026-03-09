@@ -64,6 +64,7 @@ Hệ thống skills cho Claude Code, auto-load theo ngữ cảnh yêu cầu:
 | `tele-menu-designer` | Tạo/sửa menu, keyboard, navigation flow |
 | `tele-payment-gateway` | Nạp tiền, thanh toán, QR, crypto |
 | `tele-user-system` | Profile, referral, balance, user management |
+| `tele-affiliate-system` | Affiliate multi-tier, commission, payout, leaderboard |
 | `tele-admin-panel` | Admin commands, stats, broadcast, duyệt đơn |
 | `tele-notification` | Thông báo tự động, scheduled, welcome flow |
 | `tele-i18n-engine` | Thêm ngôn ngữ, dịch nội dung |
@@ -79,5 +80,14 @@ Hệ thống skills cho Claude Code, auto-load theo ngữ cảnh yêu cầu:
 | `n8n-database-sheets` | Postgres, MySQL, Google Sheets, Supabase, data sync |
 | `n8n-trigger-scheduler` | Webhook, cron, form trigger, event-driven |
 | `n8n-api-integration` | HTTP Request, OAuth, app nodes (Telegram, Slack, Gmail) |
+| `n8n-lead-sales-funnel` | Lead gen, email sequence, nurture, scoring, sales funnel |
+| `n8n-content-social` | AI content, multi-platform posting, scheduling, analytics |
+| `n8n-scraper-data` | Web scraping, data extraction, price monitor, competitive intel |
 | `n8n-automation-patterns` | Error handling, optimization, sub-workflow, testing |
 | `n8n-marketplace` | Đóng gói workflow bán, pricing, documentation |
+
+### MMO Master Skill
+
+| Skill | Khi nào dùng |
+|-------|-------------|
+| `mmo-playbook` | Biến ý tưởng → hệ thống kiếm tiền, chiến lược, combo recipes |
