@@ -1,11 +1,26 @@
-
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config()
 
-// Token
 const bot = new TelegramBot(process.env.TOKEN_BOT, { polling: true });
 
 // === 1. ĐỊNH NGHĨA MENU (CONSTANTS) ===
+
+// ✅ REPLY KEYBOARD (bàn phím cố định phía dưới)
+const replyKeyboard = {
+  reply_markup: {
+    keyboard: [
+      [
+        { text: '📦 Gói' },
+        { text: '🆘 Hỗ trợ' }
+      ],
+      [
+        { text: '💰 Nạp tiền' }
+      ]
+    ],
+    resize_keyboard: true,      // Thu nhỏ vừa màn hình
+    persistent: true            // Luôn hiển thị, không ẩn
+  }
+};
 
 // Menu Chọn Ngôn Ngữ
 const langMenu = {
@@ -116,109 +131,140 @@ const topupMenu = {
 };
 
 // === 2. BIẾN TRẠNG THÁI ===
-const userLang = {}; // { chatId: 'vi' }
+const userLang = {};
 
 // === 3. XỬ LÝ LỆNH ===
 
 bot.onText(/\/start/, (msg) => {
-  // Khi start, gửi tin nhắn mới (không edit)
-  bot.sendMessage(msg.chat.id, '👋 **Xin chào! / Hello!**\n\nVui lòng chọn ngôn ngữ.\nPlease select language.', { 
-    parse_mode: 'Markdown', 
-    ...langMenu 
-  });
+  // ✅ Gửi Reply Keyboard trước (hiển thị bàn phím cố định)
+  bot.sendMessage(msg.chat.id, '⌨️ Bàn phím nhanh đã sẵn sàng!', replyKeyboard);
+
+  // Sau đó gửi menu chọn ngôn ngữ
+  bot.sendMessage(
+    msg.chat.id,
+    '👋 **Xin chào! / Hello!**\n\nVui lòng chọn ngôn ngữ.\nPlease select language.',
+    { parse_mode: 'Markdown', ...langMenu }
+  );
+});
+
+// ✅ XỬ LÝ REPLY KEYBOARD (tin nhắn text từ bàn phím cố định)
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+  const lang = userLang[chatId] || 'vi';
+
+  // Bỏ qua lệnh /start (đã xử lý riêng)
+  if (!text || text.startsWith('/')) return;
+
+  switch (text) {
+    case '📦 Gói':
+      bot.sendMessage(chatId, '📦 **Danh sách gói dịch vụ:**\n\n🔹 Gói cơ bản\n🔹 Gói nâng cao\n🔹 Gói Pro', {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Xem chi tiết các gói', callback_data: 'menu_tool' }]
+          ]
+        }
+      });
+      break;
+
+    case '💰 Nạp tiền':
+      bot.sendMessage(chatId, '💰 **Nạp Tiền / Top-up**\nChọn phương thức:', {
+        parse_mode: 'Markdown',
+        reply_markup: topupMenu.reply_markup
+      });
+      break;
+
+    case '🆘 Hỗ trợ':
+      bot.sendMessage(chatId, '🆘 **Hỗ trợ / Support**\n\n📩 Liên hệ admin: @your_admin\n⏰ Hỗ trợ: 8:00 - 22:00', {
+        parse_mode: 'Markdown'
+      });
+      break;
+  }
 });
 
 bot.on('callback_query', (query) => {
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
   const action = query.data;
-
-  // Lấy ngôn ngữ hiện tại (mặc định VI)
   let lang = userLang[chatId] || 'vi';
 
-  // --- LOGIC XỬ LÝ ---
   try {
     switch (action) {
-      // 1. CHỌN NGÔN NGỮ
       case 'set_lang_vi':
         userLang[chatId] = 'vi';
         bot.editMessageText('🏠 **Menu Chính**\nBạn muốn làm gì?', {
-          chat_id: chatId, 
-          message_id: msgId, 
+          chat_id: chatId,
+          message_id: msgId,
           parse_mode: 'Markdown',
-          reply_markup: mainMenuVI.reply_markup // Truyền rõ ràng reply_markup
+          reply_markup: mainMenuVI.reply_markup
         });
         break;
 
       case 'set_lang_en':
         userLang[chatId] = 'en';
         bot.editMessageText('🏠 **Main Menu**\nWhat do you want to do?', {
-          chat_id: chatId, 
-          message_id: msgId, 
+          chat_id: chatId,
+          message_id: msgId,
           parse_mode: 'Markdown',
           reply_markup: mainMenuEN.reply_markup
         });
         break;
 
-      // 2. QUAY LẠI MENU CHÍNH
       case 'back_main':
         if (lang === 'vi') {
-          bot.editMessageText('🏠 **Menu Chính**\nBạn muốn làm gì?', { 
-            chat_id: chatId, 
-            message_id: msgId, 
-            parse_mode: 'Markdown', 
-            reply_markup: mainMenuVI.reply_markup 
+          bot.editMessageText('🏠 **Menu Chính**\nBạn muốn làm gì?', {
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'Markdown',
+            reply_markup: mainMenuVI.reply_markup
           });
         } else {
-          bot.editMessageText('🏠 **Main Menu**\nWhat do you want to do?', { 
-            chat_id: chatId, 
-            message_id: msgId, 
-            parse_mode: 'Markdown', 
-            reply_markup: mainMenuEN.reply_markup 
+          bot.editMessageText('🏠 **Main Menu**\nWhat do you want to do?', {
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'Markdown',
+            reply_markup: mainMenuEN.reply_markup
           });
         }
         break;
 
-      // 3. MENU TOOL
       case 'menu_tool':
         if (lang === 'vi') {
-          bot.editMessageText('🛠️ **Kho Công Cụ**\nChọn loại tool:', { 
-            chat_id: chatId, 
-            message_id: msgId, 
-            parse_mode: 'Markdown', 
-            reply_markup: toolMenuVI.reply_markup 
+          bot.editMessageText('🛠️ **Kho Công Cụ**\nChọn loại tool:', {
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'Markdown',
+            reply_markup: toolMenuVI.reply_markup
           });
         } else {
-          bot.editMessageText('🛠️ **Tools Hub**\nSelect tool type:', { 
-            chat_id: chatId, 
-            message_id: msgId, 
-            parse_mode: 'Markdown', 
-            reply_markup: toolMenuEN.reply_markup 
+          bot.editMessageText('🛠️ **Tools Hub**\nSelect tool type:', {
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'Markdown',
+            reply_markup: toolMenuEN.reply_markup
           });
         }
         break;
 
-      // 4. SUB-MENU: TOOL VIDEO
       case 'tool_video':
-        bot.editMessageText('🎥 **Tool Video**\nChọn dịch vụ:', { 
-          chat_id: chatId, 
-          message_id: msgId, 
-          parse_mode: 'Markdown', 
-          reply_markup: videoToolMenu.reply_markup 
+        bot.editMessageText('🎥 **Tool Video**\nChọn dịch vụ:', {
+          chat_id: chatId,
+          message_id: msgId,
+          parse_mode: 'Markdown',
+          reply_markup: videoToolMenu.reply_markup
         });
         break;
 
-      // 5. MENU NẠP TIỀN
       case 'menu_topup':
-        bot.editMessageText('💰 **Nạp Tiền / Top-up**', { 
-          chat_id: chatId, 
-          message_id: msgId, 
-          parse_mode: 'Markdown', 
-          reply_markup: topupMenu.reply_markup 
+        bot.editMessageText('💰 **Nạp Tiền / Top-up**', {
+          chat_id: chatId,
+          message_id: msgId,
+          parse_mode: 'Markdown',
+          reply_markup: topupMenu.reply_markup
         });
         break;
 
-      // 6. CÁC NÚT ACTION
       case 'topup_vnd':
         bot.sendMessage(chatId, `🏦 MBBank: 0123456789\nNội dung: ORDER...`);
         break;
@@ -226,7 +272,7 @@ bot.on('callback_query', (query) => {
       case 'buy_higg':
         bot.answerCallbackQuery(query.id, { text: '✅ Đã thêm Higg vào giỏ!' });
         break;
-        
+
       case 'menu_profile':
         bot.answerCallbackQuery(query.id, { text: '👤 Profile: Coming soon...' });
         break;
@@ -238,9 +284,8 @@ bot.on('callback_query', (query) => {
     console.error('Logic Error:', error.message);
   }
 
-  // Luôn phải answer để tắt loading
   bot.answerCallbackQuery(query.id).catch(() => {});
 });
 
 bot.on('polling_error', (err) => console.log('Lỗi Polling:', err.message));
-console.log('Bot running with EDIT MODE (FIXED)...');
+console.log('Bot running with EDIT MODE + REPLY KEYBOARD...');
