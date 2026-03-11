@@ -1,16 +1,18 @@
-const bot = require('../bot');
-const { t } = require('../locales');
-const { getSession } = require('../middlewares/session');
-const kb = require('../keyboards/main.keyboard');
+import bot from '../bot';
+import { t } from '../locales';
+import * as kb from '../keyboards/main.keyboard';
+import { userService } from '../services/user.service';
+import TelegramBot from 'node-telegram-bot-api';
 
 // Xử lý reply keyboard buttons (text messages)
-bot.on('message', (msg) => {
+bot.on('message', async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
   const text = msg.text;
 
   if (!text || text.startsWith('/')) return;
 
-  const lang = getSession(chatId).lang || 'vi';
+  const user = await userService.getUser(chatId);
+  const lang = user?.lang || 'vi';
 
   switch (text) {
     case '📦 Gói':
@@ -34,5 +36,3 @@ bot.on('message', (msg) => {
       break;
   }
 });
-
-module.exports = {};

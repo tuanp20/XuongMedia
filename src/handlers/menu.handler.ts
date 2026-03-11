@@ -1,10 +1,11 @@
-const bot = require('../bot');
-const { t } = require('../locales');
-const { getSession, setSession } = require('../middlewares/session');
-const kb = require('../keyboards/main.keyboard');
+import bot from '../bot';
+import { t } from '../locales';
+import * as kb from '../keyboards/main.keyboard';
+import { userService } from '../services/user.service';
+import TelegramBot from 'node-telegram-bot-api';
 
 // Helper: edit message với keyboard
-const editMsg = (chatId, msgId, lang, textKey, keyboard, params) => {
+const editMsg = (chatId: number, msgId: number, lang: string, textKey: string, keyboard: any, params?: any) => {
   bot.editMessageText(t(lang, textKey, params), {
     chat_id: chatId,
     message_id: msgId,
@@ -13,17 +14,22 @@ const editMsg = (chatId, msgId, lang, textKey, keyboard, params) => {
   });
 };
 
-bot.on('callback_query', (query) => {
+bot.on('callback_query', async (query: TelegramBot.CallbackQuery) => {
+  if (!query.message) return;
+  
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
   const action = query.data;
-  const session = getSession(chatId);
-  const lang = session.lang || 'vi';
+  
+  if (!action) return;
+
+  const user = await userService.getUser(chatId);
+  const lang = user?.lang || 'vi';
 
   // Language selection
   if (action === 'lang:vi' || action === 'lang:en') {
     const newLang = action.split(':')[1];
-    setSession(chatId, { lang: newLang });
+    await userService.updateLanguage(chatId, newLang);
     editMsg(chatId, msgId, newLang, 'menu.main', kb.getMainMenu(newLang));
     bot.answerCallbackQuery(query.id);
     return;
@@ -54,8 +60,8 @@ bot.on('callback_query', (query) => {
         editMsg(chatId, msgId, lang, 'menu.profile', kb.getMainMenu(lang), {
           name: query.from.first_name || 'User',
           chatId,
-          balance: session.balance || 0,
-          joined: session.createdAt || 'N/A',
+          balance: user?.balance || 0,
+          joined: user?.createdAt?.toLocaleDateString('vi-VN') || 'N/A',
         });
         break;
       case 'guide':
@@ -64,8 +70,8 @@ bot.on('callback_query', (query) => {
       case 'referral':
         editMsg(chatId, msgId, lang, 'menu.referral', kb.getMainMenu(lang), {
           link: `https://t.me/${(query.message.chat.username || 'bot')}?start=ref_${chatId}`,
-          count: session.referralCount || 0,
-          earnings: session.referralEarnings || 0,
+          count: user?.referralCount || 0,
+          earnings: user?.referralEarnings || 0,
         });
         break;
       case 'support':
@@ -97,12 +103,32 @@ bot.on('callback_query', (query) => {
 
   // Store (prefix: s:)
   if (action.startsWith('s:')) {
-    bot.answerCallbackQuery(query.id, { text: '✅ Đã thêm vào giỏ!' });
+    const buyAction = action.replace('s:buy:', '');
+    let price = 0;
+    let itemName = '';
+
+    if (buyAction === 'higg') {
+      price = 22000;
+      itemName = 'Higg Video';
+    } else if (buyAction === 'motion') {
+      price = 15000;
+      itemName = 'Motion Control Video';
+    }
+
+    if (price > 0) {
+      const result = await userService.processPurchase(chatId, price, `Mua ${itemName}`);
+      if (result.success) {
+        bot.answerCallbackQuery(query.id, { text: `✅ Mua thành công! Số dư: ${result.balance}đ` });
+      } else {
+        bot.answerCallbackQuery(query.id, { text: `❌ Số dư không đủ! Cần ${price}đ`, show_alert: true });
+        bot.sendMessage(chatId, t(lang, 'menu.topup'), kb.getTopupMenu(lang));
+      }
+    } else {
+      bot.answerCallbackQuery(query.id, { text: '✅ Đã thêm vào giỏ!' });
+    }
     return;
   }
 
   // Fallback
   bot.answerCallbackQuery(query.id, { text: t(lang, 'developing') });
 });
-
-module.exports = {};
